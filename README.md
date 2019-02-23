@@ -20,3 +20,10 @@ PDF电子发票信息提取，从电子发票左上角的二维码中识别以�
 ```
 pip install pillow pandas
 ```
+
+## 3. 使用说明
+需要提供含PDF电子发票的文件夹路径和输出的excel文件名：
+
+```
+python3 main.py -i /path/to/pdf/invoice -o output.xlsx
+```
