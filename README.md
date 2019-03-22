@@ -27,3 +27,14 @@ pip install pillow pandas
 ```
 python3 main.py -i /path/to/pdf/invoice -o output.xlsx
 ```
+
+## 4. 使用Docker
+因为这个环境配置起来太麻烦，所以我创建了一个Docker方式。
+第一步：build环境
+```
+docker image build -t mupdf .
+```
+第二步：执行本地程序
+```
+docker container run --rm -it  -v /Users/ron/Documents/docker_images:/code mupdf python3 main.py -i invoice -o output.xlsx
+```
