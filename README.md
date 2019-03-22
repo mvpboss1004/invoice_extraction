@@ -29,8 +29,8 @@ python3 main.py -i /path/to/pdf/invoice -o output.xlsx
 ```
 
 ## 4. 使用Docker
-因为这个环境配置起来太麻烦，所以我创建了一个Docker方式。
-第一步：build环境
+因为这个环境配置起来太麻烦，所以我创建了一个Docker方式。   
+第一步：build环境 
 ```
 docker image build -t mupdf .
 ```
