@@ -1,0 +1,5 @@
+pillow
+pandas
+pymupdf
+zbarlight
+openpyxl
