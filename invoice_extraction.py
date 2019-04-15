@@ -1,3 +1,4 @@
+#coding: utf-8
 import fitz
 from zbarlight import scan_codes
 from io import BytesIO
