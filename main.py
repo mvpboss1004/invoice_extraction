@@ -17,7 +17,7 @@ if __name__ == '__main__':
     for root, folders, files in os.walk(opts.input):
         for file_name in files:
             if file_name.endswith('.pdf'):
-                ret = ie.extract_qrcode_info(os.path.join(root,file_name))
+                ret = ie.extract_pdf_info(os.path.join(root,file_name))
                 ret['文件名'] = file_name
                 df.append(ret)
         if not opts.recursive:
