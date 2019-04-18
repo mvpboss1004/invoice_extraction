@@ -1,13 +1,16 @@
 #coding: utf-8
 import fitz
 from zbarlight import scan_codes
-from io import BytesIO, StringIO
+from io import BytesIO
+from StringIO import StringIO
 from PIL import Image
 from datetime import datetime
-from tempfile import NamedTemporaryFile
-from pygrok import Grok
 import os
 import re
+from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
+from pdfminer.converter import TextConverter
+from pdfminer.pdfpage import PDFPage
+
 class InvoiceExtraction:
     qrcode_keys = [
         ['f0', 'f1', '发票代码', '发票号码', '金额', '开票日期', '校验码', 'f6'],
@@ -57,10 +60,6 @@ class InvoiceExtraction:
     }
 
     def __init__(self):
-        f = NamedTemporaryFile(delete=False)
-        self._tmp_txt = f.name
-        f.close()
-
         self._patterns = {}
         for key in self.regex_element:
             self._patterns[key] = re.compile(self.regex_element[key], re.M)
@@ -85,13 +84,17 @@ class InvoiceExtraction:
             return {}
     
     def extract_pdf_info(self, file_path):
-        os.system("pdf2txt.py '%s' -o '%s'"%(file_path, self._tmp_txt))
-        with open(self._tmp_txt) as f:
-            text = '\n'.join(list(filter(None, [line.strip() for line in f.read().split('\n')])))
-
+        rsrcmgr = PDFResourceManager()
+        sio = open(file_path+'.txt', 'wb')
+        device = TextConverter(rsrcmgr, sio)
+        interpreter = PDFPageInterpreter(rsrcmgr, device)
+        with open(file_path, 'rb') as f:
+            [interpreter.process_page(page) for page in PDFPage.get_pages(f)]
         ret = {}
+        text = ''
         for key in self._patterns:
             mt = self._patterns[key].match(text)
             if mt:
                 ret[key] = mt.groupdict()['field']
+        sio.close()
         return ret
