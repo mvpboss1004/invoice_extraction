@@ -23,7 +23,7 @@
 程序依赖包括`zbarlight`、`PyMuPDF`用于二维码识别法，`pdfminer.six`用于PDF文本正则法。然而这三个无法简单地通过`pip`安装。具体安装方法参见：  
  - `zbarlight`：[https://pypi.org/project/zbarlight/](https://pypi.org/project/zbarlight/)  
  - `PyMuPDF`：[https://pypi.org/project/PyMuPDF/](https://pypi.org/project/PyMuPDF/)  
- - `pdfminer`：[https://euske.github.io/pdfminer/index.html](https://euske.github.io/pdfminer/index.html)
+ - `pdfminer`：[https://euske.github.io/pdfminer/index.html](https://euske.github.io/pdfminer/index.html)  
 其他依赖通过`pip`安装即可： 
 
 ```
