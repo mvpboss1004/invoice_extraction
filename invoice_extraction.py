@@ -2,14 +2,11 @@
 import fitz
 from zbarlight import scan_codes
 from io import BytesIO
-from StringIO import StringIO
 from PIL import Image
 from datetime import datetime
 import os
 import re
-from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
-from pdfminer.converter import TextConverter
-from pdfminer.pdfpage import PDFPage
+import subprocess
 
 class InvoiceExtraction:
     qrcode_keys = [
@@ -17,52 +14,12 @@ class InvoiceExtraction:
         ['f0', 'f1', '发票代码', '发票号码', '销售方纳税人识别号', '金额', '开票日期', '校验码'],
     ]
 
-    grok_element = {
-        'PASSWD_ZONE': r'(([0-9/+\-\<\>\*]\s?){27}[0-9/+\-\<\>\*]\n){4}',
-        'CHECKSUM_KEY': r'校\s*验\s*码:',
-        'CHECKSUM': r'(\d{5}\s*){3}\d{5}',
-        'DATE_KEY': r'开票日期:',
-        'CN_DATE': r'201\d[\s年]*((0[1-9])|(1[0-2]))[\s月]*((0[1-9])|([1-2][0-9])|(3[0-1]))[\s日]*',
-        'ORGID_KEY': r'纳税人识别号:',
-        'ORGID': r'\w{18}',
-        'UPPER_KEY': r'价税合计[（\(]大写[）\)]',
-        'UPPER_NUMBER': r'[零壹贰叁肆伍陆柒捌玖拾佰仟万亿整元圆角分\s]+',
-        'LOWER_KEY': r'[（\(]小写[）\)]',
-        'ADDRTEL_KEY': r'地\s*址\s*、\n?\s*电\s*话:',
-        'NAME_KEY': r'名\s*称:',
-        'BANKACCOUNT_KEY': r'开户行及账号:',
-        'RECEIVER_KEY': r'收\s*款\s*人:',
-        'VALIDATOR_KEY': r'复\s*核:',
-        'PRINTER_KEY': r'开\s*票\s*人:',
-        'LID_KEY': r'发票单号：',
-        'LID': r'\w{16}',
-        'OID_KEY': r'订单号',
-        'OID': r'\w{23}',
-    }
-
-    key_field_map = {
-        'passwd_zone': '密码区',
-        'total_upper': '价税合计(大写)',
-        'total_lower': '价税合计(小写)',
-        'seller_name': '购买方名称',
-        'seller_id': '销售方纳税人识别号',
-        'seller_addr_tel': '销售方地址、电话',
-        'seller_bank_account': '销售方开户行及账号',
-        'receiver': '收款人',
-        'validator': '复核',
-        'printer': '开票人',
-    }
-
     regex_element = {
-        '开票地': '(?P<field>.*增值税电子((普通)|(专用))发票)',
-        '价税合计(小写)': '[（\(]小写[）\)](.*\n)*[¥￥](?P<field>\d+\.\d+)',
-        '密码区': '密码区(.*\n)*(?P<field>(([0-9/+\-\<\>\*]\s?){27}[0-9/+\-\<\>\*]\n){4})'
+        '开票地': re.compile(r'(?P<field>.*增值税电子((普通)|(专用))发票)'),
+        '价税合计(小写)': re.compile(r'[¥￥](?P<field>\d+\.\d+)'),
+        '密码区': re.compile(r'(?P<field>(([0-9/+\-\<\>\*]\s?){26,27}[0-9/+\-\<\>\*]\n){4})', re.M),
+        '价税合计(大写)': re.compile(r'(?P<field>[壹贰叁肆伍陆柒捌玖拾]\s?[零壹贰叁肆伍陆柒捌玖拾佰仟万亿整元圆角分\s]+[整元圆角分])')
     }
-
-    def __init__(self):
-        self._patterns = {}
-        for key in self.regex_element:
-            self._patterns[key] = re.compile(self.regex_element[key], re.M)
 
     def extract_qrcode_info(self, file_path):
         try:
@@ -72,10 +29,9 @@ class InvoiceExtraction:
             values = filter(None, scan_codes(['qrcode'], img)[0].decode().split(','))
             for keys in self.qrcode_keys:
                 ret = dict(zip(keys, values))
-                try:
-                    ret['金额'] = eval(ret['金额'])
+                ret['金额'] = eval(ret.get('金额','None'))
+                try:    
                     ret['开票日期'] = datetime.strptime(ret['开票日期'], '%Y%m%d').date()
-                    break
                 except:
                     pass
             return ret
@@ -84,17 +40,18 @@ class InvoiceExtraction:
             return {}
     
     def extract_pdf_info(self, file_path):
-        rsrcmgr = PDFResourceManager()
-        sio = open(file_path+'.txt', 'wb')
-        device = TextConverter(rsrcmgr, sio)
-        interpreter = PDFPageInterpreter(rsrcmgr, device)
-        with open(file_path, 'rb') as f:
-            [interpreter.process_page(page) for page in PDFPage.get_pages(f)]
+        text = subprocess.Popen(['pdf2txt.py', file_path], stdout=subprocess.PIPE).stdout.read().decode('utf-8').replace('\n\n','\n').strip()
         ret = {}
-        text = ''
-        for key in self._patterns:
-            mt = self._patterns[key].match(text)
+        for key in self.regex_element:
+            mt = self.regex_element[key].search(text)
             if mt:
                 ret[key] = mt.groupdict()['field']
-        sio.close()
+        ret['价税合计(小写)'] = eval(ret.get('价税合计(小写)','None'))
+        ret['密码区'] = ret.get('密码区','').replace(' ','').replace('\n','')
+        ret['价税合计(大写)'] = ret.get('价税合计(大写)','').replace(' ','')
+        return ret
+
+    def extract(self, file_path):
+        ret = dict(self.extract_pdf_info(file_path), **self.extract_qrcode_info(file_path)
+        ret['文件名'] = os.path.split(file_path)[1]
         return ret
