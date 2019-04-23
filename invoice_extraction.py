@@ -16,10 +16,10 @@ class InvoiceExtraction:
 
     regex_element = {
         '开票地': re.compile(r'(?P<field>.*增值税电子((普通)|(专用))发票)'),
-        '价税合计(小写)': re.compile(r'[¥￥](?P<field>\d+\.\d+)'),
+        '价税合计(小写)': re.compile(r'[\(（]小写[\)）](.*\n)*?[¥￥](?P<field>\d+\.\d+)', re.M),
         '密码区': re.compile(r'(?P<field>(([0-9/+\-\<\>\*]\s?){26,27}[0-9/+\-\<\>\*]\n){4})', re.M),
         '价税合计(大写)': re.compile(r'(?P<field>[壹贰叁肆伍陆柒捌玖拾]\s?[零壹贰叁肆伍陆柒捌玖拾佰仟万亿整元圆角分\s]+[整元圆角分])'),
-        '购买方纳税人识别号': re.compile(r'纳税人识别号:\n(.*\n)*(?P<field>[0-9a-zA-Z]{18})', re.M)
+        '购买方纳税人识别号': re.compile(r'纳税人识别号:\n(.*\n)*?(?P<field>[0-9a-zA-Z]{18})', re.M)
     }
 
     def extract_qrcode_info(self, file_path):
@@ -47,6 +47,7 @@ class InvoiceExtraction:
     def extract_pdf_info(self, file_path):
         try:
             text = subprocess.Popen(['pdf2txt.py', file_path], stdout=subprocess.PIPE).stdout.read().decode('utf-8').replace('\n\n','\n').strip()
+            print(text)
             ret = {}
             for key in self.regex_element:
                 mt = self.regex_element[key].search(text)

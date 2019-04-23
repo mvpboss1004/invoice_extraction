@@ -10,6 +10,7 @@ if __name__ == '__main__':
     parser.add_option('-i', '--input', dest='input', help='输入文件夹，含pdf电子发票', default='./')
     parser.add_option('-o', '--output', dest='output', help='输出各发票字段表格', default='output.xlsx')
     parser.add_option('-r', '--recursive', dest='recursive', help='是否递归查找子文件夹中的发票', action='store_true')
+    parser.add_option('-n', '--normalize', dest='normalize', help='是否重命名发票，格式：[发票号码]_[价税合计（小写）].pdf', action='store_true')
     opts, args = parser.parse_args()
     ie = InvoiceExtraction()
 
@@ -17,7 +18,14 @@ if __name__ == '__main__':
     for root, folders, files in os.walk(opts.input):
         for file_name in files:
             if file_name.endswith('.pdf'):
-                df.append(ie.extract(os.path.join(root, file_name)))
+                src_pdf = os.path.join(root, file_name)
+                ret = ie.extract(src_pdf)
+                df.append(ret)
+                if opts.normalize and '发票号码' in ret and '价税合计(小写)' in ret:
+                    dst_pdf = os.path.join(root, '%s_%s.pdf'%(ret['发票号码'], ret['价税合计(小写)']))
+                    os.rename(src_pdf, dst_pdf)
+                df.append(ret)
         if not opts.recursive:
             break
+    
     pd.DataFrame(df).to_excel(opts.output, index=False)
