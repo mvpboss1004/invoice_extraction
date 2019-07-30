@@ -4,6 +4,7 @@ import sys
 import os
 from optparse import OptionParser
 import pandas as pd
+from progressbar import progressbar
 
 if __name__ == '__main__':
     parser = OptionParser()
@@ -16,16 +17,15 @@ if __name__ == '__main__':
 
     df = []
     for root, folders, files in os.walk(opts.input):
-        for file_name in files:
+        for file_name in progressbar(files):
             if file_name.endswith('.pdf'):
                 src_pdf = os.path.join(root, file_name)
                 ret = ie.extract(src_pdf)
-                df.append(ret)
                 if opts.normalize and '发票号码' in ret and '价税合计(小写)' in ret:
-                    dst_pdf = os.path.join(root, '%s_%s.pdf'%(ret['发票号码'], ret['价税合计(小写)']))
+                    ret['文件名'] = '%s_%s.pdf'%(ret['发票号码'], ret['价税合计(小写)'])
+                    dst_pdf = os.path.join(root, ret['文件名'])
                     os.rename(src_pdf, dst_pdf)
                 df.append(ret)
         if not opts.recursive:
             break
-    
     pd.DataFrame(df).to_excel(opts.output, index=False)
